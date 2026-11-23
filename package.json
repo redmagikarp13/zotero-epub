@@ -1,8 +1,8 @@
 {
   "name": "zotero-epub",
   "type": "module",
-  "version": "1.1.0",
-  "description": "A Zotero 10 plugin that brings PDF-like EPUB reading: virtual pagination, font/layout controls, dual-page mode, and bookmarks.",
+  "version": "1.2.0",
+  "description": "A Zotero 10 plugin that brings PDF-like EPUB reading: virtual pagination, font/layout controls, text & background colour (sepia) presets, dual-page mode, and bookmarks.",
   "config": {
     "addonName": "Zotero EPUB Reader",
     "addonID": "zotero-epub@vecear.github.io",

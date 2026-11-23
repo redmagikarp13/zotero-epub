@@ -6,21 +6,38 @@
 
 > **Fork** de [vecear/zotero-epub](https://github.com/vecear/zotero-epub), actualizado e testado para **Zotero 10+** (mantendo compatibilidade com Zotero 9). Dependências na era Zotero 10 (`zotero-plugin-toolkit` 6, `zotero-plugin-scaffold` 0.9, `zotero-types` 4.1) e código de exemplo do _template_ removido para um startup limpo.
 
-為 Zotero 9 / 10 打造接近 PDF 的 EPUB 閱讀體驗：字體 / 圖片 / 行距 / 字型獨立控制、捲動 ↔ 翻頁切換、單頁 / 雙頁模式，全部設定 GLOBAL 持久化。
+為 Zotero 9 / 10 打造接近 PDF 的 EPUB 閱讀體驗：字體 / 圖片 / 行距 / 字型 / 顏色獨立控制、捲動 ↔ 翻頁切換、單頁 / 雙頁模式，全部設定 GLOBAL 持久化。
 
-## ✨ Features
+> Experiência de leitura EPUB quase igual ao PDF para Zotero 9 / 10: controlo independente de fonte / imagem / espaçamento / tipo de letra / cores, alternância rolagem ↔ páginas, modo 1 ou 2 páginas e persistência GLOBAL de todos os ajustes.
 
-| Toolbar 按鈕    | 功能                   | 說明                                                            |
-| --------------- | ---------------------- | --------------------------------------------------------------- |
-| **A−** / **A+** | 字體縮小 / 放大 `1 px` | 整數偏移，`+N` 然後 `−N` 精確相消回到 EPUB 原始大小             |
-| **▭−** / **▭+** | 圖片縮小 / 放大 `2.5%` | 獨立控制（不跟字體聯動）；範圍 0.3×–3×                          |
-| **≡−** / **≡+** | 行距縮小 / 放大 `0.1`  | 範圍 1.0–2.5                                                    |
-| **⇅**           | 切換捲動 / 翻頁模式    | Zotero 原生 `flowMode`                                          |
-| **▤**           | 切換單頁 / 雙頁模式    | Zotero 原生 `spreadMode`                                        |
-| **字型 ▾**      | 字型下拉選單（popup）  | 11 個預設：微軟正黑、新細明、標楷、思源黑/宋、Georgia、Times 等 |
-| **↺**           | 重置全部自訂設定       | 一鍵回到 Zotero 預設                                            |
+## ✨ Features / Funcionalidades
 
-所有字體 / 圖片 / 行距 / 字型設定都是 **GLOBAL 持久化**：透過 `Zotero.Prefs` 儲存（`extensions.zotero.zotero-epub.*`），重啟 Zotero 與打開任何新的 EPUB 都會自動套用。
+| Toolbar 按鈕 Button | 功能 Função                                                    | 說明 Descrição                                                                        |
+| ------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **A−** / **A+**     | 字體縮小 / 放大 `1 px` · Reduzir / aumentar a fonte `1 px`     | 整數偏移，`+N` 然後 `−N` 精確相消 · Deslocamento inteiro: `+N` e `−N` cancelam-se     |
+| **▭−** / **▭+**     | 圖片縮小 / 放大 `2.5%` · Reduzir / ampliar as imagens `2.5%`   | 獨立控制（不跟字體聯動）· Controlo independente da fonte; 0.3×–3×                     |
+| **≡−** / **≡+**     | 行距縮小 / 放大 `0.1` · Reduzir / aumentar o espaçamento `0.1` | 範圍 1.0–2.5 · Intervalo 1.0–2.5                                                      |
+| **⇅**               | 切換捲動 / 翻頁模式 · Alternar rolagem / páginas               | Zotero 原生 `flowMode` · Nativo do Zotero `flowMode`                                  |
+| **▤**               | 切換單頁 / 雙頁模式 · Alternar 1 ou 2 páginas                  | Zotero 原生 `spreadMode` · Nativo do Zotero `spreadMode`                              |
+| **字型 Fonte ▾**    | 字型下拉選單 · Menu de tipo de letra                           | 11 個預設（正黑、細明、標楷、思源、Georgia、Times 等）· 11 opções                     |
+| **顏色 Cor ▾**      | 配色 presets + 自訂 · Esquemas de cor + personalização         | 內建「米黃 / Papel (sépia)」等預設，另可自選文字色 e 背景色 · presets + cores manuais |
+| **↺**               | 重置全部自訂設定 · Redefinir todos os ajustes                  | 一鍵回到 Zotero 預設 · Volta ao estado original do Zotero                             |
+
+所有字體 / 圖片 / 行距 / 字型 / 顏色設定都是 **GLOBAL 持久化**：透過 `Zotero.Prefs` 儲存（`extensions.zotero.zotero-epub.*`），重啟 Zotero 與打開任何新的 EPUB 都會自動套用。
+
+Todos os ajustes de fonte / imagem / espaçamento / tipo de letra / cores são **persistidos GLOBALMENTE** via `Zotero.Prefs` (`extensions.zotero.zotero-epub.*`) e reaplicados ao reiniciar o Zotero ou abrir qualquer novo EPUB.
+
+## 🎨 顏色 / Cores
+
+O botão **顏色 Cor ▾** abre um menu com duas partes / 这个按钮的菜单分两部分:
+
+1. **Presets 预设方案** — um clique para aplicar texto + fundo em conjunto / 一键套用文字与背景色的组合：
+   - `預設 · Padrão` — sem alteração (cores originais do EPUB) / 不改动（保留 EPUB 原始颜色）
+   - `米黃 · Papel (sépia)` — **o tom amarelado confortável** (texto `#5b4636` sobre fundo `#f4ecd8`) / **那个偏黄舒适的阅读色调**
+   - `深米 · Sépia escuro` · `護眼綠 · Verde suave` · `夜間 · Noite` · `淺灰 · Cinza claro`
+2. **Personalizado · 自定义** — dois seletores nativos de cor para escolher **cor do texto** e **cor do fundo** livremente / 两个原生取色器，可分别自选「文字色」与「背景色」。
+
+A cor é aplicada como CSS injectado **e** reforçada `!important` inline em `html`/`body`/elementos de texto, para vencer as folhas de estilo do próprio EPUB. A escolha fica guardada globalmente e é reaplicada nos próximos EPUB. / 颜色会通过注入 CSS 并对 html/body/文字元素上 `!important` 内联样式来覆盖 EPUB 自带样式；选择会全局保存并在之后的 EPUB 自动套用。
 
 ## 🔖 書籤工作流
 
@@ -41,7 +58,7 @@ Zotero 內建的 annotation 系統（highlight / underline / note / image / ink�
 1. Zotero 10 → 工具（Tools）→ 外掛（Add-ons）
 2. 齒輪選單 → **Install Add-on From File…** → 選下載的 `.xpi`
 3. 重啟 Zotero
-4. 開任一 EPUB → toolbar 右側應出現 10 個新控制元件
+4. 開任一 EPUB → toolbar 右側應出現 11 個新控制元件（含字型 Fonte 與顏色 Cor 两个选单）
 
 ## 🛠 Development
 

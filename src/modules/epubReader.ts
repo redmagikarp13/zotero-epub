@@ -78,49 +78,61 @@ function onRenderToolbar(event: {
   // Each button is appended individually — wrapping them in a <div> caused
   // clicks to be swallowed (likely Zotero React toolbar diff replacing the
   // wrapper). Keeping the proven single-button pattern from the probe.
+  // Tooltip labels are bilingual: 中文 · Português (Chinese kept from the
+  // original author, Portuguese added for this fork).
   const buttons: Array<[string, string, string, () => void]> = [
     [
       "ze-font-minus",
       "A−",
-      "字級 −1 px (相對 EPUB 原始大小，可精確互相抵銷)",
+      "字級 −1 px · Diminuir a fonte 1 px",
       () => adjustContentFontSize(reader, -1),
     ],
     [
       "ze-font-plus",
       "A+",
-      "字級 +1 px (相對 EPUB 原始大小，可精確互相抵銷)",
+      "字級 +1 px · Aumentar a fonte 1 px",
       () => adjustContentFontSize(reader, +1),
     ],
     [
       "ze-img-minus",
       "▭−",
-      "縮小圖片 (步進 0.025)",
+      "縮小圖片 · Reduzir as imagens",
       () => adjustImageScale(reader, -0.025),
     ],
     [
       "ze-img-plus",
       "▭+",
-      "放大圖片 (步進 0.025)",
+      "放大圖片 · Ampliar as imagens",
       () => adjustImageScale(reader, +0.025),
     ],
-    ["ze-line-minus", "≡−", "縮小行距", () => adjustLineHeight(reader, -0.1)],
-    ["ze-line-plus", "≡+", "放大行距", () => adjustLineHeight(reader, +0.1)],
+    [
+      "ze-line-minus",
+      "≡−",
+      "縮小行距 · Diminuir o espaçamento",
+      () => adjustLineHeight(reader, -0.1),
+    ],
+    [
+      "ze-line-plus",
+      "≡+",
+      "放大行距 · Aumentar o espaçamento",
+      () => adjustLineHeight(reader, +0.1),
+    ],
     [
       "ze-flow-toggle",
       "⇅",
-      "切換捲動 / 翻頁模式 (flowMode)",
+      "捲動 / 翻頁 · Rolagem / páginas",
       () => toggleFlowMode(reader),
     ],
     [
       "ze-spread-toggle",
       "▤",
-      "切換單頁 / 雙頁模式 (spreadMode)",
+      "單頁 / 雙頁 · 1 ou 2 páginas",
       () => toggleSpreadMode(reader),
     ],
     [
       "ze-reset",
       "↺",
-      "重置所有自訂設定 (字體/圖片/行距/字型/版面模式)",
+      "重置所有設定 · Redefinir tudo",
       () => resetAllSettings(reader),
     ],
   ];
@@ -132,6 +144,10 @@ function onRenderToolbar(event: {
 
   if (!doc.getElementById("ze-font-family-btn")) {
     appendFontFamilyMenu(doc, append, reader);
+  }
+
+  if (!doc.getElementById("ze-color-btn")) {
+    appendColorMenu(doc, append, reader);
   }
 
   // Auto-apply persisted GLOBAL settings to this reader once the EPUB
@@ -152,7 +168,9 @@ function applyPersistedSettings(reader: AnyReader): void {
     settings.fontOffset == null &&
     settings.imageScale == null &&
     settings.lineHeight == null &&
-    settings.fontFamily == null
+    settings.fontFamily == null &&
+    settings.textColor == null &&
+    settings.bgColor == null
   ) {
     return;
   }
@@ -172,6 +190,12 @@ function applyPersistedSettings(reader: AnyReader): void {
     }
     if (settings.imageScale != null && settings.imageScale !== 1) {
       applyInlineImageZoomRecursive(h.contentDocument, settings.imageScale);
+    }
+    if (settings.bgColor) {
+      applyInlineBackground(h.contentDocument, settings.bgColor);
+    }
+    if (settings.textColor) {
+      applyInlineColorRecursive(h.contentDocument, settings.textColor);
     }
   };
 
@@ -263,7 +287,7 @@ function ensureToolbarStyles(doc: Document): void {
 }
 
 const FONT_OPTIONS: Array<[string, string]> = [
-  ["", "預設字型"],
+  ["", "預設字型 · Padrão"],
   ['"Microsoft JhengHei", "微軟正黑體", sans-serif', "微軟正黑體"],
   ['"PMingLiU", "新細明體", "MingLiU", serif', "新細明體"],
   ['"DFKai-SB", "標楷體", "BiauKai", serif', "標楷體"],
@@ -275,8 +299,8 @@ const FONT_OPTIONS: Array<[string, string]> = [
   ["Georgia, serif", "Georgia"],
   ['"Times New Roman", Times, serif', "Times New Roman"],
   ["Arial, Helvetica, sans-serif", "Arial"],
-  ["serif", "系統 Serif"],
-  ["sans-serif", "系統 Sans-serif"],
+  ["serif", "系統 Serif · Serif do sistema"],
+  ["sans-serif", "系統 Sans-serif · Sans-serif do sistema"],
 ];
 
 /**
@@ -305,18 +329,18 @@ function appendFontFamilyMenu(
   // and shows hover background only on the icon-sized core. Override
   // with !important so our wider width wins against the host stylesheet.
   btn.className = "toolbar-button ze-tb ze-tb-wide";
-  btn.title = "更換字型";
+  btn.title = "更換字型 · Mudar a fonte";
   btn.type = "button";
   btn.style.setProperty("min-width", "70px", "important");
   btn.style.setProperty("width", "auto", "important");
   btn.style.setProperty("padding", "4px 12px", "important");
 
   const labelOf = (value: string) =>
-    FONT_OPTIONS.find((o) => o[0] === value)?.[1] ?? "預設";
+    FONT_OPTIONS.find((o) => o[0] === value)?.[1] ?? "預設 · Padrão";
   const refreshLabel = () => {
     const cur = getSettings().fontFamily ?? "";
-    btn.textContent = "字型 ▾";
-    btn.title = `更換字型 (目前: ${labelOf(cur)})`;
+    btn.textContent = "字型 Fonte ▾";
+    btn.title = `更換字型 · Mudar a fonte (atual: ${labelOf(cur)})`;
   };
   refreshLabel();
   readerLabelRefreshers.set(reader.itemID ?? -1, refreshLabel);
@@ -436,6 +460,11 @@ interface ReaderStyleState {
   imageScale?: number;
   fontFamily?: string;
   lineHeight?: number;
+  /** Foreground (text) colour override, e.g. "#5b4636". Empty/undefined
+   *  means "leave the EPUB's own colour alone". */
+  textColor?: string;
+  /** Page background colour override, e.g. "#f4ecd8" (the warm 'paper' tone). */
+  bgColor?: string;
 }
 
 const PREF_FONT_OFFSET = `${config.prefsPrefix}.fontOffset`;
@@ -443,6 +472,8 @@ const PREF_FONT_SCALE_LEGACY = `${config.prefsPrefix}.fontScale`; // cleared on 
 const PREF_IMAGE_SCALE = `${config.prefsPrefix}.imageScale`;
 const PREF_LINE_HEIGHT = `${config.prefsPrefix}.lineHeight`;
 const PREF_FONT_FAMILY = `${config.prefsPrefix}.fontFamily`;
+const PREF_TEXT_COLOR = `${config.prefsPrefix}.textColor`;
+const PREF_BG_COLOR = `${config.prefsPrefix}.bgColor`;
 
 function prefGet(key: string): unknown {
   try {
@@ -484,6 +515,12 @@ function prefGetFloat(key: string): number | undefined {
   return undefined;
 }
 
+function prefGetColor(key: string): string | undefined {
+  const v = prefGet(key);
+  if (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)) return v;
+  return undefined;
+}
+
 function getSettings(): ReaderStyleState {
   const fontFamily = prefGet(PREF_FONT_FAMILY);
   const fontOffset = prefGetFloat(PREF_FONT_OFFSET);
@@ -498,6 +535,8 @@ function getSettings(): ReaderStyleState {
       typeof fontFamily === "string" && fontFamily.length > 0
         ? fontFamily
         : undefined,
+    textColor: prefGetColor(PREF_TEXT_COLOR),
+    bgColor: prefGetColor(PREF_BG_COLOR),
   };
 }
 
@@ -507,6 +546,8 @@ function clearAllSettings(): void {
   prefClear(PREF_IMAGE_SCALE);
   prefClear(PREF_LINE_HEIGHT);
   prefClear(PREF_FONT_FAMILY);
+  prefClear(PREF_TEXT_COLOR);
+  prefClear(PREF_BG_COLOR);
 }
 
 /**
@@ -514,6 +555,7 @@ function clearAllSettings(): void {
  * Populated when the reader's toolbar is built; called on reset.
  */
 const readerLabelRefreshers: Map<number, () => void> = new Map();
+const readerColorRefreshers: Map<number, () => void> = new Map();
 
 /**
  * Adjust EPUB content font size by injecting CSS into _primaryView._iframeDocument.
@@ -882,6 +924,9 @@ function resetAllSettings(reader: AnyReader): void {
     // so we only undo our own width/height/zoom inline styles, never the
     // EPUB's own inline sizing on tables/figures/etc.
     inlineCleared += applyInlineImageZoomRecursive(handle.contentDocument, 1);
+    // Drop our inline colour overrides so the EPUB's own colours return.
+    applyInlineColorRecursive(handle.contentDocument, "");
+    applyInlineBackground(handle.contentDocument, "");
   }
 
   // 4. Reset Zotero-native modes back to single-page paginated default.
@@ -893,8 +938,9 @@ function resetAllSettings(reader: AnyReader): void {
     spreadPath = applyState(r, "spreadMode", 0);
   }
 
-  // 5. Refresh font dropdown label so it shows the default again.
+  // 5. Refresh font dropdown and colour button labels back to default.
   readerLabelRefreshers.get(itemID)?.();
+  readerColorRefreshers.get(itemID)?.();
 
   showStatus(
     `已重置全域設定 (inline 清除:${inlineCleared}, ` +
@@ -931,6 +977,280 @@ function setContentFontFamily(reader: AnyReader, family: string): void {
 
 const STYLE_ID = "ze-content-style";
 
+/**
+ * Preset colour schemes. `text` / `bg` are hex colours; empty string means
+ * "don't override that channel". "Papel (sépia)" is the warm yellowish tone
+ * the reader wants for comfortable reading.
+ */
+interface ColorPreset {
+  id: string;
+  label: string; // bilingual: 中文 · Português
+  text: string;
+  bg: string;
+}
+
+const COLOR_OPTIONS: ColorPreset[] = [
+  { id: "default", label: "預設 · Padrão", text: "", bg: "" },
+  {
+    id: "sepia",
+    label: "米黃 · Papel (sépia)",
+    text: "#5b4636",
+    bg: "#f4ecd8",
+  },
+  {
+    id: "sepiaDark",
+    label: "深米 · Sépia escuro",
+    text: "#3b2f1e",
+    bg: "#e3d5b0",
+  },
+  {
+    id: "green",
+    label: "護眼綠 · Verde suave",
+    text: "#2f3b2f",
+    bg: "#cce8cf",
+  },
+  { id: "night", label: "夜間 · Noite", text: "#c9c9c9", bg: "#1e1e1e" },
+  { id: "gray", label: "淺灰 · Cinza claro", text: "#2b2b2b", bg: "#dcdcdc" },
+];
+
+/** Set inline `color` on text-bearing elements across the doc + nested iframes.
+ *  Reuses the font-size target tag set. Empty `color` removes our inline color. */
+function applyInlineColorRecursive(doc: Document, color: string): number {
+  let count = 0;
+  try {
+    const all = doc.body?.querySelectorAll("*") ?? [];
+    all.forEach((el: Element) => {
+      if (!FONT_SIZE_TARGETS.has(el.tagName)) return;
+      const html = el as HTMLElement;
+      try {
+        if (color) html.style.setProperty("color", color, "important");
+        else html.style.removeProperty("color");
+        count++;
+      } catch {
+        /* skip element */
+      }
+    });
+  } catch {
+    /* skip doc */
+  }
+  try {
+    doc.querySelectorAll("iframe").forEach((iframe: Element) => {
+      try {
+        const sub = (iframe as HTMLIFrameElement).contentDocument;
+        if (sub) count += applyInlineColorRecursive(sub, color);
+      } catch {
+        /* cross-origin */
+      }
+    });
+  } catch {
+    /* skip */
+  }
+  return count;
+}
+
+/** Force the page background on html + body (and nested iframes). Empty
+ *  `color` removes our override so the EPUB's own background returns. */
+function applyInlineBackground(doc: Document, color: string): number {
+  let count = 0;
+  const paint = (d: Document) => {
+    try {
+      const targets = [d.documentElement, d.body] as HTMLElement[];
+      targets.forEach((el) => {
+        if (!el) return;
+        try {
+          if (color)
+            el.style.setProperty("background-color", color, "important");
+          else el.style.removeProperty("background-color");
+          count++;
+        } catch {
+          /* skip */
+        }
+      });
+    } catch {
+      /* skip doc */
+    }
+    try {
+      d.querySelectorAll("iframe").forEach((iframe: Element) => {
+        try {
+          const sub = (iframe as HTMLIFrameElement).contentDocument;
+          if (sub) paint(sub);
+        } catch {
+          /* cross-origin */
+        }
+      });
+    } catch {
+      /* skip */
+    }
+  };
+  paint(doc);
+  return count;
+}
+
+function setColorPair(reader: AnyReader, text: string, bg: string): void {
+  const handle = getEpubHandle(reader);
+  if (!handle?.contentDocument) {
+    showStatus("無法取得 EPUB 內容 iframe (contentDocument null)");
+    return;
+  }
+  if (text) prefSet(PREF_TEXT_COLOR, text);
+  else prefClear(PREF_TEXT_COLOR);
+  if (bg) prefSet(PREF_BG_COLOR, bg);
+  else prefClear(PREF_BG_COLOR);
+
+  const settings = getSettings();
+  applyStyles(handle.contentDocument, settings);
+  applyInlineBackground(handle.contentDocument, settings.bgColor ?? "");
+  applyInlineColorRecursive(handle.contentDocument, settings.textColor ?? "");
+  readerColorRefreshers.get(reader.itemID ?? -1)?.();
+  showStatus(
+    `色彩 Cor → text=${settings.textColor ?? "—"}, bg=${settings.bgColor ?? "—"}`,
+  );
+}
+
+/**
+ * Bilingual (中文 · Português) colour menu, mirroring the font menu pattern:
+ * preset swatches on top, then two native colour pickers for full control.
+ */
+function appendColorMenu(
+  doc: Document,
+  append: (el: Element) => void,
+  reader: AnyReader,
+): void {
+  const btn = doc.createElement("button");
+  btn.id = "ze-color-btn";
+  btn.className = "toolbar-button ze-tb ze-tb-wide";
+  btn.type = "button";
+  btn.style.setProperty("min-width", "96px", "important");
+  btn.style.setProperty("width", "auto", "important");
+  btn.style.setProperty("padding", "4px 12px", "important");
+
+  const refreshLabel = () => {
+    const s = getSettings();
+    const active = COLOR_OPTIONS.find(
+      (p) => p.text === s.textColor && p.bg === s.bgColor,
+    );
+    if (active) btn.textContent = `顏色 · ${active.label.split(" · ")[1]} ▾`;
+    else if (s.textColor || s.bgColor)
+      btn.textContent = "顏色 · Personalizado ▾";
+    else btn.textContent = "顏色 Cor ▾";
+    btn.title = `配色（背景/文字）· cores do plano de fundo e do texto`;
+  };
+  refreshLabel();
+  readerColorRefreshers.set(reader.itemID ?? -1, refreshLabel);
+
+  let menuEl: HTMLDivElement | null = null;
+  let outsideHandler: ((ev: Event) => void) | null = null;
+
+  const closeMenu = () => {
+    menuEl?.remove();
+    menuEl = null;
+    if (outsideHandler) {
+      doc.removeEventListener("click", outsideHandler, true);
+      outsideHandler = null;
+    }
+  };
+
+  const openMenu = () => {
+    closeMenu();
+    const rect = btn.getBoundingClientRect();
+    const m = doc.createElement("div");
+    m.className = "ze-font-menu";
+    m.style.top = `${rect.bottom + 2}px`;
+    m.style.left = `${rect.left}px`;
+
+    for (const p of COLOR_OPTIONS) {
+      const item = doc.createElement("button");
+      item.type = "button";
+      item.className = "ze-font-menu-item";
+      item.textContent = p.label;
+      item.style.setProperty("background-color", p.bg || "transparent", "");
+      if (p.text) item.style.setProperty("color", p.text, "");
+      item.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setColorPair(reader, p.text, p.bg);
+        refreshLabel();
+        closeMenu();
+      });
+      m.appendChild(item);
+    }
+
+    const hr = doc.createElement("div");
+    hr.style.setProperty("height", "1px", "");
+    hr.style.setProperty("background", "rgba(127,127,127,0.4)", "");
+    hr.style.setProperty("margin", "4px 0", "");
+    m.appendChild(hr);
+
+    const mkRow = (
+      label: string,
+      value: string,
+      onPick: (hex: string) => void,
+    ) => {
+      const row = doc.createElement("label");
+      row.className = "ze-font-menu-item";
+      row.style.setProperty("display", "flex", "");
+      row.style.setProperty("align-items", "center", "");
+      row.style.setProperty("justify-content", "space-between", "");
+      row.style.setProperty("gap", "10px", "");
+      const span = doc.createElement("span");
+      span.textContent = label;
+      const input = doc.createElement("input");
+      input.type = "color";
+      input.value = value || "#000000";
+      input.style.setProperty("border", "none", "");
+      input.style.setProperty("background", "none", "");
+      input.style.setProperty("width", "44px", "");
+      input.style.setProperty("height", "24px", "");
+      input.style.setProperty("cursor", "pointer", "");
+      input.addEventListener("input", () => onPick(input.value));
+      input.addEventListener("click", (e) => e.stopPropagation());
+      row.appendChild(span);
+      row.appendChild(input);
+      m.appendChild(row);
+    };
+
+    const cur = getSettings();
+    mkRow("文字色 · Cor do texto", cur.textColor ?? "#5b4636", (hex) => {
+      setColorPair(reader, hex, getSettings().bgColor ?? "");
+      refreshLabel();
+    });
+    mkRow("背景色 · Cor do fundo", cur.bgColor ?? "#f4ecd8", (hex) => {
+      setColorPair(reader, getSettings().textColor ?? "", hex);
+      refreshLabel();
+    });
+
+    doc.body?.appendChild(m);
+    menuEl = m;
+
+    const docWidth = doc.documentElement?.clientWidth ?? 0;
+    if (docWidth > 0) {
+      const menuRect = m.getBoundingClientRect();
+      if (menuRect.right > docWidth - 4) {
+        const adjustedLeft = Math.max(4, docWidth - menuRect.width - 4);
+        m.style.left = `${adjustedLeft}px`;
+      }
+    }
+
+    outsideHandler = (ev: Event) => {
+      const target = ev.target as Node;
+      if (m.contains(target) || btn.contains(target)) return;
+      closeMenu();
+    };
+    setTimeout(() => {
+      if (outsideHandler) doc.addEventListener("click", outsideHandler, true);
+    }, 0);
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (menuEl) closeMenu();
+    else openMenu();
+  });
+
+  append(btn);
+}
+
 function buildCss(state: ReaderStyleState): string {
   const parts: string[] = [];
 
@@ -962,6 +1282,26 @@ function buildCss(state: ReaderStyleState): string {
   if (state.fontFamily) {
     parts.push(
       `html body, html body * { font-family: ${state.fontFamily} !important; }`,
+    );
+  }
+
+  // Background (page) colour — the warm 'paper / sepia' reading tone lives
+  // here. Applied on html + body so the whole content area repaints; the
+  // inline pass (applyInlineBackground) reinforces it against EPUB styles
+  // that set their own body background.
+  if (state.bgColor) {
+    parts.push(
+      `html, html body { background-color: ${state.bgColor} !important; }`,
+    );
+  }
+
+  // Text colour — paired with bgColor for presets. The inline pass
+  // (applyInlineColorRecursive) is what actually wins over EPUB class rules
+  // like '.chapter p { color:#000 !important }'; this rule is a light-duty
+  // fallback for elements the inline walk skips.
+  if (state.textColor) {
+    parts.push(
+      `html body, html body * { color: ${state.textColor} !important; }`,
     );
   }
   return parts.join("\n");
