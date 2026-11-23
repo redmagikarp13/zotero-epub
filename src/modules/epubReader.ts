@@ -1,10 +1,12 @@
 /**
- * EPUB reader integration for Zotero 9.
+ * EPUB reader integration for Zotero 9 / Zotero 10.
  *
  * Post-probe strategy (2026-04-18, see findings.md §9):
- *   Zotero 9 Reader exposes rich native APIs on _internalReader.prototype.
+ *   The Zotero Reader exposes rich native APIs on _internalReader.prototype.
  *   We act as a UI extension layer that calls these APIs and renders our
  *   own toolbar controls / settings panels via Zotero.Reader event hooks.
+ *   Zotero 10 keeps the same reader architecture as Zotero 9 (both ride the
+ *   Firefox 140 ESR Gecko), so these accessors carry over unchanged.
  *
  *   - reader._internalReader        → Reader (src/common/reader.js)
  *   - reader._internalReader._primaryView → EPUBView (src/dom/epub/epub-view.ts)
@@ -280,11 +282,13 @@ const FONT_OPTIONS: Array<[string, string]> = [
 /**
  * Custom font-family menu (replaces native <select>).
  *
- * Why: Native <select> dropdown opens on mousedown only when the element
+ * Why: Native <select> dropdowns open on mousedown only when the element
  * is already focused. In Zotero's React-controlled reader toolbar the
  * first click is consumed as focus, so the menu requires a second click.
- * select.showPicker() would solve this but landed in Firefox 121 — Zotero
- * 9 still rides the Firefox 115 ESR Gecko, so it's unavailable.
+ * `select.showPicker()` would solve this, but it is unreliable while the
+ * toolbar React tree re-renders around it, so we keep the custom popup for
+ * a single-click experience that behaves identically on Zotero 9 and 10
+ * (both are Firefox 140 ESR, which does ship showPicker since Firefox 121).
  *
  * Solution: a button (single-click thanks to .toolbar-button class) that
  * builds an absolute-positioned popup attached to document.body.
@@ -1062,7 +1066,11 @@ function toggleSpreadMode(reader: AnyReader): void {
 
   // Only intercept when turning spread ON for a vertical book; turning it back
   // off is always allowed.
-  if (enabling && handle.contentDocument && isVerticalContent(handle.contentDocument)) {
+  if (
+    enabling &&
+    handle.contentDocument &&
+    isVerticalContent(handle.contentDocument)
+  ) {
     showStatus("直式書不支援同螢幕兩頁 (Zotero 排版引擎限制)");
     try {
       (Zotero as any)
